@@ -1,5 +1,6 @@
 import { Readable } from "stream"
 import fs from "fs"
+import { log } from "console"
 
 const rivers = [
     "Amazon",
@@ -33,10 +34,23 @@ riversStream.on("data", (chunk) => console.log(chunk))
 riversStream.on("end", () => console.log("end"))
 
 const readStream = fs.createReadStream("vide.mp4")
+const writeStream = fs.createWriteStream("./copy.mp4", { highWaterMark: 162922 })
 
 readStream.on("data", (chunk) => {
     console.log("size of chunk");
+    const res = writeStream.write(chunk)
+    if (!res) {
+        //backpressure
+        readStream.pause()
+    }
+})
+readStream.pipe(writeStream).on("error", (chunk) => {
+    console.log("stream ended");
 
+})
+
+writeStream.on("drain", () => {
+    readStream.resume()
 })
 
 readStream.on("end", (chunk) => {
@@ -56,4 +70,8 @@ process.stdin.on("data", (chunk) => {
         readStream.resume()
     }
     readStream.read()
+})
+
+writeStream.on("close", () => {
+    process.stdout.write('file copied')
 })
